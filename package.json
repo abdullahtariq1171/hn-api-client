@@ -1,0 +1,12 @@
+{
+  "name": "hacker-news-api",
+  "version": "0.0.1",
+  "description": "A isomorphit client for Hacker News",
+  "main": "index.js",
+  "author": "Abdullah",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "isomorphic-fetch": "^2.2.1"
+  }
+}
