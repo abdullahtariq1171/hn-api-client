@@ -1,37 +1,49 @@
 const fetch = require('isomorphic-fetch');
 
-const API_PREFIX = `https://hacker-news.firebaseio.com`
+const fetchApiJSON = uri => fetch(`https://hacker-news.firebaseio.com/${uri}.json`).then(r => r.json())
 
-const fetchJSON = url => fetch(url).then(res => res.json())
+const DEFAULTS = {version: 'v0', onlyIds: false, fetchSubmitted: false, fetchKids: false}
 
-const defaults = {
-  version: 'v0'
-}
+const fetchItems = (ids, version) =>
+  Promise.all(ids.map(id => fetchApiJSON(`${version}/item/${id}`)))
 
 function storiesCurry(apiPath) {
-  return function({version} = defaults) {
-    return fetchJSON(`${API_PREFIX}/${version}/${apiPath}.json`)
+  return opts => {
+    const {version, onlyIds} = Object.assign({}, DEFAULTS, opts)
+
+    return fetchApiJSON(`${version}${apiPath}`)
+      .then(async ids => {
+        return onlyIds ? ids : await Promise.all(ids.slice(0, 5).map(id => fetchApiJSON(`${version}/item/${id}`)))
+      })
+  }
+}
+
+function entityCurry(entityType) {
+  return (id, opts) => {
+    const {version, fetchKids, fetchSubmitted} = Object.assign({}, DEFAULTS, opts)
+
+    return fetchApiJSON(`${version}/${entityType}/${id}`).then(async entity => {
+      if(!fetchKids && !fetchSubmitted) return entity;
+
+      if(fetchKids && entityType === 'item') {
+        entity.kids = await fetchItems(entity.kids, version)
+      } else if (fetchSubmitted && entityType === 'user') {
+        entity.submitted = await fetchItems(entity.submitted, version)
+      }
+      return entity
+    })
   }
 }
 
 module.exports = {
-  getItem: (id, {version: v} = defaults) => fetchJSON(`${API_PREFIX}/${v}/item/${id}.json`),
-
-  getUser: (id, {version: v} = defaults) => fetchJSON(`${API_PREFIX}/${v}/user/${id}.json`),
-
-  getMaxItemID: ({version: v} = defaults) => fetchJSON(`${API_PREFIX}/${v}/maxitem.json`),
-
-  getTopStories: ({version: v} = defaults) => fetchJSON(`${API_PREFIX}/${v}/topstories.json`),
-
-  getNewStories: ({version: v} = defaults) => fetchJSON(`${API_PREFIX}/${v}/newstories.json`),
-
-  getBestStories: ({version: v} = defaults) => fetchJSON(`${API_PREFIX}/${v}/beststories.json`),
-
-  getAskStories: ({version: v} = defaults) => fetchJSON(`${API_PREFIX}/${v}/askstories.json`),
-
-  getShowStories: ({version: v} = defaults) => fetchJSON(`${API_PREFIX}/${v}/showstories.json`),
-
-  getJobStories: ({version: v} = defaults) => fetchJSON(`${API_PREFIX}/${v}/jobstories.json`),
-
-  getUpdates: ({version: v} = defaults) => fetchJSON(`${API_PREFIX}/${v}/updates.json`),
+  getItem: entityCurry('item'),
+  getUser: entityCurry('user'),
+  getTopStories: storiesCurry('/topstories'),
+  getNewStories: storiesCurry('/newstories'),
+  getBestStories: storiesCurry('/beststories'),
+  getAskStories: storiesCurry('/askstories'),
+  getShowStories: storiesCurry('/showstories'),
+  getJobStories: storiesCurry('/jobstories'),
+  getMaxItemID: ({version: v} = DEFAULTS) => fetchApiJSON(`${v}/maxitem`),
+  getUpdates: ({version: v} = DEFAULTS) => fetchApiJSON(`${v}/updates`),
 }
