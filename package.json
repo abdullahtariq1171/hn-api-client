@@ -1,9 +1,9 @@
 {
-  "name": "hacker-news-api",
+  "name": "hn-api-client",
   "version": "0.0.1",
-  "description": "A isomorphit client for Hacker News",
+  "description": "A isomorphic client for Hacker News API",
   "main": "index.js",
-  "author": "Abdullah",
+  "author": "Abdullah <abdullahtariq52@gmail.com>",
   "license": "MIT",
   "private": false,
   "scripts": {
